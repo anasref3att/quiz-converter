@@ -1,0 +1,211 @@
+{\rtf1\ansi\ansicpg1252\cocoartf2761
+\cocoatextscaling0\cocoaplatform0{\fonttbl\f0\fswiss\fcharset0 Helvetica;}
+{\colortbl;\red255\green255\blue255;}
+{\*\expandedcolortbl;;}
+\paperw11900\paperh16840\margl1440\margr1440\vieww11520\viewh8400\viewkind0
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+
+\f0\fs24 \cf0 <!DOCTYPE html>\
+<html lang="en">\
+<head>\
+    <meta charset="UTF-8">\
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">\
+    <title>LearnDash DOCX to XLSX Converter</title>\
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>\
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>\
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>\
+    <script src="https://cdn.tailwindcss.com"></script>\
+    <style>\
+        body \{ font-family: 'Inter', sans-serif; background-color: #f3f4f6; \}\
+        .drop-zone \{ border: 2px dashed #cbd5e1; transition: all 0.2s; \}\
+        .drop-zone.active \{ border-color: #3b82f6; background-color: #eff6ff; \}\
+    </style>\
+</head>\
+<body>\
+    <div id="root"></div>\
+\
+    <script type="text/babel">\
+        const \{ useState \} = React;\
+\
+        function App() \{\
+            const [file, setFile] = useState(null);\
+            const [status, setStatus] = useState('idle'); // idle, uploading, success, error\
+            const [errors, setErrors] = useState([]);\
+            const [stats, setStats] = useState(null);\
+            const [downloadUrl, setDownloadUrl] = useState(null);\
+            const [dragActive, setDragActive] = useState(false);\
+\
+            const handleDrag = (e) => \{\
+                e.preventDefault();\
+                e.stopPropagation();\
+                if (e.type === "dragenter" || e.type === "dragover") \{\
+                    setDragActive(true);\
+                \} else if (e.type === "dragleave") \{\
+                    setDragActive(false);\
+                \}\
+            \};\
+\
+            const handleDrop = (e) => \{\
+                e.preventDefault();\
+                e.stopPropagation();\
+                setDragActive(false);\
+                if (e.dataTransfer.files && e.dataTransfer.files[0]) \{\
+                    validateAndSetFile(e.dataTransfer.files[0]);\
+                \}\
+            \};\
+\
+            const handleChange = (e) => \{\
+                if (e.target.files && e.target.files[0]) \{\
+                    validateAndSetFile(e.target.files[0]);\
+                \}\
+            \};\
+\
+            const validateAndSetFile = (f) => \{\
+                if (!f.name.endsWith('.docx')) \{\
+                    alert('Please upload a .docx file');\
+                    return;\
+                \}\
+                setFile(f);\
+                setStatus('idle');\
+                setErrors([]);\
+                setDownloadUrl(null);\
+            \};\
+\
+            const handleSubmit = async () => \{\
+                if (!file) return;\
+\
+                setStatus('uploading');\
+                const formData = new FormData();\
+                formData.append('file', file);\
+\
+                try \{\
+                    // Determine URL based on environment\
+                    let url = '/api/convert';\
+                    \
+                    // If running in a preview/sandbox where origin is null, try to point to localhost\
+                    // This prevents the specific "Failed to parse URL" error\
+                    if (window.location.origin === 'null' || !window.location.origin) \{\
+                        url = 'http://localhost:3000/api/convert';\
+                    \}\
+\
+                    const res = await fetch(url, \{\
+                        method: 'POST',\
+                        body: formData\
+                    \});\
+\
+                    if (res.ok) \{\
+                        const blob = await res.blob();\
+                        const url = window.URL.createObjectURL(blob);\
+                        setDownloadUrl(url);\
+                        setStatus('success');\
+                        setErrors([]);\
+                    \} else \{\
+                        const data = await res.json();\
+                        setErrors(data.details || [\{ id: 'System', msg: 'Unknown error occurred' \}]);\
+                        setStats(data.stats);\
+                        setStatus('error');\
+                    \}\
+                \} catch (err) \{\
+                    let msg = err.message;\
+                    // Provide helpful context for common connection errors\
+                    if (msg.includes('Failed to parse URL') || msg.includes('Failed to fetch')) \{\
+                        msg = "Cannot connect to Backend. Ensure you are running 'npm start' locally and accessing http://localhost:3000.";\
+                    \}\
+                    setErrors([\{ id: 'System', msg: msg \}]);\
+                    setStatus('error');\
+                \}\
+            \};\
+\
+            return (\
+                <div className="min-h-screen flex items-center justify-center p-4">\
+                    <div className="bg-white rounded-xl shadow-lg p-8 max-w-2xl w-full">\
+                        <header className="mb-8">\
+                            <h1 className="text-2xl font-bold text-gray-800">LearnDash Converter</h1>\
+                            <p className="text-gray-500 text-sm">Convert strict DOCX Quiz Banks to XLSX</p>\
+                        </header>\
+\
+                        \{/* File Upload Area */\}\
+                        <div \
+                            className=\{`drop-zone rounded-lg p-10 text-center cursor-pointer mb-6 $\{dragActive ? 'active' : ''\}`\}\
+                            onDragEnter=\{handleDrag\}\
+                            onDragLeave=\{handleDrag\}\
+                            onDragOver=\{handleDrag\}\
+                            onDrop=\{handleDrop\}\
+                            onClick=\{() => document.getElementById('file-input').click()\}\
+                        >\
+                            <input \
+                                id="file-input" \
+                                type="file" \
+                                className="hidden" \
+                                accept=".docx"\
+                                onChange=\{handleChange\} \
+                            />\
+                            \{file ? (\
+                                <div>\
+                                    <div className="text-blue-600 font-semibold text-lg">\{file.name\}</div>\
+                                    <div className="text-gray-400 text-sm mt-1">Click to change file</div>\
+                                </div>\
+                            ) : (\
+                                <div>\
+                                    <div className="text-gray-400 text-lg">Drag & Drop .docx here</div>\
+                                    <div className="text-gray-300 text-sm mt-2">or click to browse</div>\
+                                </div>\
+                            )\}\
+                        </div>\
+\
+                        \{/* Action Button */\}\
+                        <button \
+                            onClick=\{handleSubmit\}\
+                            disabled=\{!file || status === 'uploading'\}\
+                            className=\{`w-full py-3 rounded-lg font-semibold text-white transition-colors\
+                                $\{!file || status === 'uploading' \
+                                    ? 'bg-gray-300 cursor-not-allowed' \
+                                    : 'bg-blue-600 hover:bg-blue-700'\}`\}\
+                        >\
+                            \{status === 'uploading' ? 'Processing...' : 'Convert to XLSX'\}\
+                        </button>\
+\
+                        \{/* Success State */\}\
+                        \{status === 'success' && (\
+                            <div className="mt-6 p-4 bg-green-50 border border-green-200 rounded-lg text-center">\
+                                <div className="text-green-800 font-medium mb-2">Conversion Successful!</div>\
+                                <a \
+                                    href=\{downloadUrl\} \
+                                    download=\{`$\{file.name.replace('.docx', '')\}.xlsx`\}\
+                                    className="inline-block bg-green-600 text-white px-6 py-2 rounded-md hover:bg-green-700 font-medium"\
+                                >\
+                                    Download XLSX\
+                                </a>\
+                            </div>\
+                        )\}\
+\
+                        \{/* Error State */\}\
+                        \{status === 'error' && (\
+                            <div className="mt-6">\
+                                <div className="p-4 bg-red-50 border border-red-200 rounded-lg">\
+                                    <div className="flex items-center justify-between mb-2">\
+                                        <span className="text-red-800 font-bold">Validation Failed</span>\
+                                        \{stats && <span className="text-red-600 text-sm">Processed \{stats.total\} questions</span>\}\
+                                    </div>\
+                                    <div className="max-h-60 overflow-y-auto">\
+                                        \{errors.map((err, idx) => (\
+                                            <div key=\{idx\} className="text-sm text-red-700 border-b border-red-100 py-2 last:border-0">\
+                                                \{err.id && err.id !== 'System' && <span className="font-semibold">Q\{err.id\}: </span>\}\
+                                                \{err.id === 'System' && <span className="font-semibold">System: </span>\}\
+                                                \{err.msg\}\
+                                            </div>\
+                                        ))\}\
+                                    </div>\
+                                </div>\
+                            </div>\
+                        )\}\
+                    </div>\
+                </div>\
+            );\
+        \}\
+\
+        const root = ReactDOM.createRoot(document.getElementById('root'));\
+        root.render(<App />);\
+    </script>\
+</body>\
+</html>}
