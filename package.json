@@ -1,3 +1,4 @@
+{
 FROM node:18-alpine
 
 # Create app directory
@@ -15,3 +16,4 @@ EXPOSE 3000
 
 # Start command
 CMD [ "npm", "start" ]
+}
